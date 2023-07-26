@@ -1,24 +1,23 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import './styles/app.css';
+import { interpret } from './juli/interpreter';
+
+
+function runCode(){
+  const input = document.getElementById("codeinput") as HTMLTextAreaElement;
+  console.log("CODE: " + input.value);
+  const result = interpret(input.value);
+  console.log(result);
+
+  const output = document.getElementById("output") as HTMLElement;
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className='app'>
+<textarea className='textInput' id='codeinput' ></textarea>
+<div className='runbtn' onClick={runCode}>Run</div>
+<div className='output' id='output'></div>
     </div>
   );
 }

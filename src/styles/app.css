@@ -1,0 +1,35 @@
+.app{
+    width: 100vw;
+    height: 100vh;
+    background-color: rgb(37, 37, 37);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.textInput{
+    outline: none;
+    border: 2px solid white;
+    background-color: #454545;
+    width: 50%;
+    height: 50%;
+    border-radius: 1em;
+    color: white;
+    padding: 0.5em;
+    font-size: 2em;
+}
+
+.runbtn {
+    padding: 1em;
+    margin: 1em;
+    border-radius: 1em;
+    background-color: green;
+    color: white;
+    text-align: center; 
+}
+
+.output{
+    font-size: 2em;
+    color: white;
+}
