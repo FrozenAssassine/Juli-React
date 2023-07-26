@@ -2,10 +2,11 @@
     <img src="images/icon.svg" height="200px" width="auto" alt="alternate text">
  </p>
  <h1  align="center">Juli Programming Language</h1>
- 
- ###
- 
-My own programming language called Juli in Typescript and React
+ My own programming language called Juli in Typescript and React
+
+#
+
+### INFO: Work in progress, so the interpreter is missing. You can only generate the Abstract Syntax Tree.
 
 ### Syntax:
 
