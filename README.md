@@ -1,46 +1,81 @@
-# Getting Started with Create React App
+ <p align="center">
+    <img src="images/icon.svg" height="200px" width="auto" alt="alternate text">
+ </p>
+ <h1  align="center">Juli Programming Language</h1>
+ My own programming language called Juli in Typescript and React
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+#
 
-## Available Scripts
+### INFO: Work in progress, so the interpreter is missing. You can only generate the Abstract Syntax Tree.
 
-In the project directory, you can run:
+### Syntax:
 
-### `npm start`
+### Comments:
+```py
+#This is a comment
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Create a variable:
+```py
+var myvariable1 = 100;
+var myvariable2 = 100.55;
+var myvariable3 = "Hello World";
+var myarray = [500, 1000, 2000, 4000];
+```
+### For loops:
+```py
+for(var item in myarray)
+{
+}
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+for(var i in range(0, 100))
+{
+}
+```
 
-### `npm test`
+### Output:
+```py
+print(50 + 200);
+print("Hello World");
+print(myvariable1);
+print(myarray);
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Math operations:
+```py
+100 + 100;
+100 - 100;
+100 * 100;
+100 / 100;
+100 % 100;
+```
 
-### `npm run build`
+### Functions:
+```py
+func calculateAdd(val1: int, val2: int) : int
+{
+  return val1 + val2;
+}
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### If:
+```py
+if(myvariable1 == 100)
+{
+}
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Access array:
+```py
+print(myarray[:3]);
+print(myarray[1:2]);
+print(myarray[2:-1]);
+print(myarray[1]);
+print(myarray[:]);
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Repeat string:
+```py
+print("-" * 50);
+```
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
