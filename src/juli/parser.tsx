@@ -1,5 +1,5 @@
 // parser.ts
-import { Lexer, SyntaxKind, Token } from "./lexer";
+import { Lexer, SyntaxKind, Token } from "./Lexer";
 import { AbstractSyntaxTree } from "./AbstractSyntaxTree";
 import { AST_Number } from "./AST/AST_Number";
 import { BracketDepth } from "./BracketDepth";
@@ -20,6 +20,7 @@ import { AST_Arrayaccess } from "./AST/AST_Arrayaccess";
 import { AST_Return } from "./AST/AST_Return";
 import { AST_Else } from "./AST/AST_Else";
 import { AST_If } from "./AST/AST_If";
+import { VariableHelper } from "./VariableHelper";
 
 enum VariableDataType {
     Number,
@@ -31,7 +32,7 @@ enum VariableDataType {
 class Parser {
     private lexer: Lexer;
     private currentToken: Token;
-    private bracketDepth: BracketDepth;
+    public bracketDepth: BracketDepth;
     private lastToken: Token | null;
 
     constructor(lexer: Lexer) {
@@ -39,14 +40,6 @@ class Parser {
         this.currentToken = this.lexer.getNextToken();
         this.bracketDepth = new BracketDepth();
         this.lastToken = null;
-    }
-
-    public detectDataType(token: Token): VariableDataType {
-        let identifier = token.type;
-        if (identifier === SyntaxKind.String_ID) return VariableDataType.String;
-        if (identifier === SyntaxKind.Number_ID) return VariableDataType.Number;
-        if (identifier === SyntaxKind.Bool_ID) return VariableDataType.Bool;
-        throw new Error("Datatype of variable could not be determinated: " + token.type);
     }
 
     private nextToken(tokenType: SyntaxKind) {
@@ -66,8 +59,11 @@ class Parser {
         const last = this.lastToken;
         this.nextToken(SyntaxKind.Add_ID);
 
+        console.log("LAST: " + last?.type);
+
         //concatenate strings:
-        if (last?.type === SyntaxKind.String_ID) return new AST_Concatinate(this.identify(last), this.identify());
+        if (last?.type === SyntaxKind.String_ID) 
+            return new AST_Concatinate(this.identify());
         return new AST_MathOperation(MathOperation.Add);
     }
     private getRangeKeyword(): AbstractSyntaxTree {
@@ -88,7 +84,6 @@ class Parser {
         return new AST_Len(variable);
     }
     private getVariableCreate(): AbstractSyntaxTree {
-        console.log("Variable Create");
         this.nextToken(SyntaxKind.Variable_ID);
         const name = this.currentToken.value ?? "";
         this.nextToken(SyntaxKind.Identifier_ID);
@@ -119,6 +114,7 @@ class Parser {
             identifier = this.currentToken.type;
         }
         this.nextToken(SyntaxKind.Semicolon_ID);
+
         return new AST_VariableAssignment(assignValues, variableName);
     }
     private getForLoop(): AbstractSyntaxTree {
@@ -225,7 +221,7 @@ class Parser {
     private getFunctionArgument(): AbstractSyntaxTree {
         let name = this.lastToken?.value;
         this.nextToken(SyntaxKind.Colon_ID);
-        let datatype = this.detectDataType(this.currentToken);
+        let datatype = VariableHelper.detectDataType(this.currentToken);
         this.nextTokenAny();
         if (this.currentToken.type === SyntaxKind.Comma_ID) this.nextTokenAny();
 
@@ -360,6 +356,8 @@ class Parser {
 
         if (token == null) return null;
 
+        console.log("IDENTIFY: " + token.type);
+
         switch (token.type) {
             //bracketDepth:
             case SyntaxKind.LeftSqrBracket_ID:
@@ -472,14 +470,26 @@ class Parser {
         }
     }
 
+    private printAST(ast: AbstractSyntaxTree | null) {
+        console.log("------------NODES------------");
+    
+        let node = ast;
+        while (node != null) {
+            console.log(node);
+            node = node.nextToken;
+        }
+    }
+
     public parse(): AbstractSyntaxTree | null {
-        let root = this.identify();
-        let node = root;
+        let root = new AbstractSyntaxTree(null);
+        let node: AbstractSyntaxTree | null = root;
+
+        this.printAST(root);
 
         while (node != null) {
             node = node.nextToken = this.identify();
         }
-
+        
         return root;
     }
 }

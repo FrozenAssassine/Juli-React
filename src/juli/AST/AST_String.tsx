@@ -1,5 +1,5 @@
 import { AbstractSyntaxTree } from "../AbstractSyntaxTree";
-import { Token } from "../lexer";
+import { Token } from "../Lexer";
 
 export class AST_String extends AbstractSyntaxTree {
     public value: string;

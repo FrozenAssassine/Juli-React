@@ -1,5 +1,5 @@
 import { AbstractSyntaxTree } from "../AbstractSyntaxTree";
-import { Token } from "../lexer";
+import { Token } from "../Lexer";
 
 export class AST_Bool extends AbstractSyntaxTree {
     public value: boolean | null;

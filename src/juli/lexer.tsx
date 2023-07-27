@@ -77,6 +77,15 @@ class Lexer {
         }
     }
 
+    private getNumber(): string{
+        let res = "";
+        while(this.isDigit(this.currentChar ?? "")){
+            res += this.currentChar;
+            this.advance();
+        }
+        return res;
+    }
+
     private isDigit(char: string): boolean {
         const charCode = char.charCodeAt(0);
         return charCode >= 48 && charCode <= 57; // ASCII codes for digits '0' to '9'
@@ -290,6 +299,9 @@ class Lexer {
             if (this.isSequence("len")) {
                 this.advance(3);
                 return new Token(SyntaxKind.Len_KW);
+            }
+            if(this.isDigit(this.currentChar ?? "")){
+                return new Token(SyntaxKind.Number_ID, this.getNumber());
             }
             if (this.isLetterOrDigit(this.currentChar ?? "") || this.currentChar === "_") {
                 return new Token(SyntaxKind.Identifier_ID, this.getIdentifier());

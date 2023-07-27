@@ -1,7 +1,7 @@
 import { AbstractSyntaxTree } from "../AbstractSyntaxTree";
 
 class AST_BoolOperation extends AbstractSyntaxTree {
-    constructor(boolOperation: BoolOperation) {
+    constructor(public boolOperation: BoolOperation) {
         super(null);
     }
 }

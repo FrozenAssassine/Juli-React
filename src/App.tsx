@@ -1,13 +1,11 @@
 import React from 'react';
 import './styles/app.css';
-import { interpret } from './juli/interpreter';
-
+import { Interpreter } from './juli/Interpreter';
 
 function runCode(){
   const input = document.getElementById("codeinput") as HTMLTextAreaElement;
   console.log("CODE: " + input.value);
-  const result = interpret(input.value);
-  console.log(result);
+  const result = new Interpreter(input.value).interpret();
 
   const output = document.getElementById("output") as HTMLElement;
 }

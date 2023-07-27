@@ -1,8 +1,8 @@
 import { AbstractSyntaxTree } from "../AbstractSyntaxTree";
-import { Token } from "../lexer";
+import { Token } from "../Lexer";
 
 class AST_Number extends AbstractSyntaxTree{
-    private value: number;
+    public value: number;
 
     constructor(public token: Token) {
         super(null);
