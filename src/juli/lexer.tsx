@@ -41,6 +41,7 @@ enum SyntaxKind {
     SmallerEquals_ID,
     Colon_ID,
     Return_ID,
+    New_ID,
     EOF,
 }
 
@@ -299,6 +300,10 @@ class Lexer {
             if (this.isSequence("len")) {
                 this.advance(3);
                 return new Token(SyntaxKind.Len_KW);
+            }
+            if(this.isSequence("new")){
+                this.advance(3);
+                return new Token(SyntaxKind.New_ID);
             }
             if(this.isDigit(this.currentChar ?? "")){
                 return new Token(SyntaxKind.Number_ID, this.getNumber());

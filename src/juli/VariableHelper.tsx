@@ -21,6 +21,10 @@ export class VariableHelper{
 
     public static detectDataTypeOfAny(value: any): VariableDataType
     {
+        if(Array.isArray(value)){
+            return this.detectArrayDatatype(value);
+        }
+        
         if (typeof(value) === "string")
             return VariableDataType.String;
         else if (typeof(value) === "number")
@@ -30,10 +34,21 @@ export class VariableHelper{
         throw new Error("Datatype of variable could not be determinated: " + value);
     }
 
+    public static detectDataTypeOfAST(data: AbstractSyntaxTree): VariableDataType
+    {
+        if (data instanceof AST_String)
+            return VariableDataType.String;
+        else if (data instanceof AST_Number)
+            return VariableDataType.Number;
+        else if (data instanceof AST_Bool)
+            return VariableDataType.Bool;
+        return VariableDataType.None;
+    }
+
     public static detectArrayDatatype(items: AbstractSyntaxTree[]): VariableDataType
     {
         //update this to check not only the first, but all items:
-        return this.detectDataTypeOfAny(items[0]);
+        return this.detectDataTypeOfAST(items[0]);
     }
 
     public static getNumberFromAST(node: AbstractSyntaxTree): number

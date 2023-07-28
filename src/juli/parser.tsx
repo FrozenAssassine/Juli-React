@@ -21,6 +21,7 @@ import { AST_Return } from "./AST/AST_Return";
 import { AST_Else } from "./AST/AST_Else";
 import { AST_If } from "./AST/AST_If";
 import { VariableHelper } from "./VariableHelper";
+import { AST_ArrayValues } from "./AST/AST_ArrayValues";
 
 enum VariableDataType {
     Number,
@@ -42,11 +43,11 @@ class Parser {
         this.lastToken = null;
     }
 
-    private nextToken(tokenType: SyntaxKind) {
+    private nextToken(tokenType: SyntaxKind, errorMessage: string = "") {
         if (this.currentToken.type === tokenType) {
             this.nextTokenAny();
         } else {
-            throw new Error("Expected " + tokenType + " but got " + this.currentToken.type);
+            throw new Error(errorMessage !== "" ? errorMessage : "Expected " + tokenType + " but got " + this.currentToken.type);
         }
     }
     private nextTokenAny(): Token {
@@ -95,7 +96,8 @@ class Parser {
         let assignValues: AbstractSyntaxTree[] = [];
 
         //Array:
-        if (identifier === SyntaxKind.LeftSqrBracket_ID) {
+        if (identifier === SyntaxKind.New_ID) {
+            this.nextToken(SyntaxKind.LeftSqrBracket_ID);
             do {
                 let item = this.identify();
                 identifier = this.currentToken.type;
@@ -222,6 +224,7 @@ class Parser {
         let name = this.lastToken?.value;
         this.nextToken(SyntaxKind.Colon_ID);
         let datatype = VariableHelper.detectDataType(this.currentToken);
+
         this.nextTokenAny();
         if (this.currentToken.type === SyntaxKind.Comma_ID) this.nextTokenAny();
 
@@ -351,12 +354,29 @@ class Parser {
         return new AST_Else(items);
     }
 
+    private getArrayCreate(): AbstractSyntaxTree {
+        this.nextToken(SyntaxKind.New_ID);
+        this.nextToken(SyntaxKind.LeftSqrBracket_ID);
+        let items: AbstractSyntaxTree[] = [];
+        let next: AbstractSyntaxTree | null;
+        do{
+            next = this.identify();
+            if(next !== null)
+                items.push(next);
+
+            this.nextTokenAny();
+            
+            if(this.currentToken.type !== SyntaxKind.Comma_ID && this.currentToken.type === SyntaxKind.RightSqrBracket_ID)
+                break;
+        }while(next !== null);
+
+        return new AST_ArrayValues(items);
+    }
+
     private identify(token: Token | null = null): AbstractSyntaxTree | null {
         if (token == null) token = this.currentToken;
 
         if (token == null) return null;
-
-        console.log("IDENTIFY: " + token.type);
 
         switch (token.type) {
             //bracketDepth:
@@ -464,6 +484,8 @@ class Parser {
                 return this.getRangeKeyword();
             case SyntaxKind.Len_KW:
                 return this.getLenKeyword();
+            case SyntaxKind.New_ID:
+                return this.getArrayCreate();
             default:
                 this.nextTokenAny();
                 return null;
