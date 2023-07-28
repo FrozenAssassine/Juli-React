@@ -278,7 +278,7 @@ class Lexer {
                 return new Token(SyntaxKind.String_ID);
             }
             if (this.isSequence("number")) {
-                this.advance(3);
+                this.advance(6);
                 return new Token(SyntaxKind.Number_ID);
             }
             if (this.isSequence("bool")) {
