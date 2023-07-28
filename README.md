@@ -20,17 +20,14 @@
 var myvariable1 = 100;
 var myvariable2 = 100.55;
 var myvariable3 = "Hello World";
-var myarray = [500, 1000, 2000, 4000];
+var myarray = new [500, 1000, 2000, 4000];
 ```
 ### For loops:
 ```py
-for(var item in myarray)
-{
-}
-
-for(var i in range(0, 100))
-{
-}
+for(var item in myarray) { }
+for(var i in range(0, 100)) { }
+for(var i in "Hello World") { }
+for(var i in new [100, 500, 1000, 5000]) { }
 ```
 
 ### Output:
@@ -52,7 +49,7 @@ print(myarray);
 
 ### Functions:
 ```py
-func calculateAdd(val1: int, val2: int) : int
+func calculateAdd(val1: number, val2: number) : number
 {
   return val1 + val2;
 }
