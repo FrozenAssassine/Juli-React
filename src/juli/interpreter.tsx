@@ -22,6 +22,8 @@ import { AST_ForLoop } from "./AST/AST_ForLoop";
 import { AST_VariableAssignment, VariableType } from "./AST/AST_VariableAssignment";
 import { AST_BoolOperation, BoolOperation } from "./AST/AST_BoolOperation";
 import { AST_Range } from "./AST/AST_Range";
+import { OutputHandler } from "./OutputHandler";
+import { AST_ArrayValues } from "./AST/AST_ArrayValues";
 
 export class Interpreter {
     private parser: Parser;
@@ -29,7 +31,7 @@ export class Interpreter {
     private Variables: Record<string, IVariable> = {};
     private Functions: Record<string, FunctionItem> = {};
 
-    constructor(public code: string){
+    constructor(public code: string, public outputHandler: OutputHandler) {
         const lexer = new Lexer(code);
         this.parser = new Parser(lexer);
     }
@@ -113,7 +115,6 @@ export class Interpreter {
 
     private getVariableByName(name: string): IVariable {
         if (this.variableExists(name)) {
-            console.log("FuNNY: " + name);
             return this.Variables[name];
         }
         throw new Error(`The variable ${name} does not exist`);
@@ -129,7 +130,7 @@ export class Interpreter {
         let start = this.getVariableValue(array_access.start) as number;
         let end = this.getVariableValue(array_access.end) as number;
 
-        if (start ===end) return this.getVariableValue(array[start]);
+        if (start === end) return this.getVariableValue(array[start]);
         else if (end === -1) return array.slice(start);
         return array.slice(start, end);
     }
@@ -162,7 +163,7 @@ export class Interpreter {
 
     private getBuiltinFunction(name: string, function_call: AST_FunctionCall) {
         if (name === "print") {
-            console.log(this.getArgumentsValue(function_call.args));
+            this.outputHandler.printOutput(this.getArgumentsValue(function_call.args));
             return true;
         }
         return false;
@@ -172,8 +173,9 @@ export class Interpreter {
         let returnValue: any = null;
 
         let functionItem: FunctionItem = this.Functions[function_call.name];
-        if (functionItem != null) {
-            if (!this.parameterAndArgumentMatch(function_call.args, functionItem.params))
+
+        if (functionItem !== undefined) {
+            if (!this.parameterAndArgumentMatch(function_call.args, functionItem?.params))
                 throw new Error(`The parameters for the function ${function_call.name} do not match`);
 
             for (let i = 0; i < function_call.args.length; i++) {
@@ -266,16 +268,15 @@ export class Interpreter {
         else if (node instanceof AST_FunctionCall) return this.callFunction(node as AST_FunctionCall);
         else if (node instanceof AST_If) return this.handleIf(node as AST_If);
         else if (node instanceof AST_Len) return this.getVariableLength(node as AST_Len);
-
+        else if (node instanceof AST_ArrayValues) return (node as AST_ArrayValues).items;
         throw new Error(`Could not get value of variable ${node} -> getVariableValue(node)`);
     }
 
-    private variableExists(name: string): boolean{
+    private variableExists(name: string): boolean {
         return this.Variables[name] !== undefined;
     }
 
     private assignVariable(variable_assign: AST_VariableAssignment) {
-        console.log("assign variable");
         let dataType: VariableDataType;
         let value: any;
         //do not assign single underscores as variable
@@ -286,7 +287,6 @@ export class Interpreter {
             value = variable_assign.assignItems;
         } else {
             value = this.getVariableValue(variable_assign.assignItems[0]);
-            console.log("VAR VALUE: " + typeof(value));
             dataType = VariableHelper.detectDataTypeOfAny(value);
         }
 
@@ -302,10 +302,11 @@ export class Interpreter {
     private interpretNexts(nodes: AbstractSyntaxTree[]): any {
         for (let node of nodes) {
             var next = this.interpretNext(node);
-            if (next != null) return next;
+            // if (next != null) return next;
         }
         return null;
     }
+
     private callVariable(variable_call: AST_VariableCall) {
         if (variable_call.variableCallAction === VariableCallAction.Change) {
             //when: variable = x
@@ -315,7 +316,11 @@ export class Interpreter {
     }
 
     private createFunction(function_create: AST_FunctionCreate) {
-        new FunctionItem(function_create.parameter, function_create.actions, function_create.returnType);
+        this.Functions[function_create.functionName] = new FunctionItem(
+            function_create.parameter,
+            function_create.actions,
+            function_create.returnType
+        );
     }
 
     private assignIterableVariable(
@@ -324,8 +329,9 @@ export class Interpreter {
         value: any,
         minbracketDepth: number
     ): IVariable {
-        return this.Variables[name] = new ScalarVariable(datatype, value, minbracketDepth);
+        return (this.Variables[name] = new ScalarVariable(datatype, value, minbracketDepth));
     }
+    
     private changeIterableVariable(name: string, newValue: any) {
         this.Variables[name].value = newValue;
     }
@@ -364,33 +370,42 @@ export class Interpreter {
             for (let i = start; i < end; i++) {
                 //update the value of the variable
                 this.changeIterableVariable(for_loop.iterationVariableName, i);
-
                 this.interpretNexts(for_loop.subItems);
             }
         }
         //When the iteration opoerator is of type array:
-        else if (for_loop.iterationOperator instanceof AST_VariableCall) {
-            let variable_call = for_loop.iterationOperator as AST_VariableCall;
-            let variable = this.Variables[variable_call.variablename];
-            if (!this.variableExists(variable_call.variablename))
-                throw new Error("Variable " + variable_call.variablename + " was not found");
+        else {
+            let value = this.getVariableValue(for_loop.iterationOperator);
+            if(value === null)
+                return;
+            
+            // if (!this.isIteratable(variable_call.variablename))
+            //     throw new Error("Variable " + variable_call.variablename + " is not iterable");
 
-            if (!this.isIteratable(variable_call.variablename))
-                throw new Error("Variable " + variable_call.variablename + " is not iterable");
-
-            let value = this.getVariableValue(variable_call) as number;
             //create the iteration variable, with null and assign the current bracket depth to it.
             this.assignIterableVariable(
                 for_loop.iterationVariableName,
-                variable.variableDataType,
+                VariableHelper.detectDataTypeOfAny(value),
                 null,
                 this.parser.bracketDepth.curlyBracket
             );
 
-            for (let i = 0; i < value; i++) {
-                //update the value of the variable
-                this.changeIterableVariable(for_loop.iterationVariableName, i);
-                this.interpretNexts(for_loop.subItems);
+                console.log(value);
+
+            //array item:
+            if (Array.isArray(value)) {
+                for (let i = 0; i < value.length; i++) {
+                    //update the value of the variable
+                    this.changeIterableVariable(for_loop.iterationVariableName, this.getVariableValue(value[i]));
+                    this.interpretNexts(for_loop.subItems);
+                }
+            } else if(typeof(value) == "string") {
+                //string:
+                for (let i = 0; i < value.length; i++) {
+                    //update the value of the variable
+                    this.changeIterableVariable(for_loop.iterationVariableName, value[i]);
+                    this.interpretNexts(for_loop.subItems);
+                }
             }
         }
 
@@ -400,15 +415,9 @@ export class Interpreter {
 
     private interpretNext(node: AbstractSyntaxTree): any {
         if (node == null) return null;
-
-        if (node instanceof AST_VariableAssignment){
-            console.log(node);
-            this.assignVariable(node as AST_VariableAssignment);
-        }    
+        if (node instanceof AST_VariableAssignment) this.assignVariable(node as AST_VariableAssignment);
         else if (node instanceof AST_VariableCall) this.callVariable(node as AST_VariableCall);
-        else if (node instanceof AST_FunctionCall)
-            //call function without using return value:
-            this.callFunction(node as AST_FunctionCall);
+        else if (node instanceof AST_FunctionCall) this.callFunction(node as AST_FunctionCall);
         else if (node instanceof AST_FunctionCreate) this.createFunction(node as AST_FunctionCreate);
         else if (node instanceof AST_ForLoop) this.handleForLoop(node as AST_ForLoop);
         else if (node instanceof AST_Arrayaccess) this.callArrayAccess(node as AST_Arrayaccess);
@@ -421,7 +430,6 @@ export class Interpreter {
     public interpret() {
         var root = this.parser.parse();
         while (root?.nextToken != null) {
-            console.log(root);
             this.interpretNext(root.nextToken);
             root = root.nextToken;
         }
