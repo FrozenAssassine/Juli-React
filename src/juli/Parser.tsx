@@ -9,7 +9,6 @@ import { AST_Bool } from "./AST/AST_Bool";
 import { AST_String } from "./AST/AST_String";
 import { AST_Range } from "./AST/AST_Range";
 import { AST_Len } from "./AST/AST_Len";
-import { AST_Concatinate } from "./AST/AST_Concatinate";
 import { AST_VariableAssignment, VariableType } from "./AST/AST_VariableAssignment";
 import { AST_ForLoop } from "./AST/AST_ForLoop";
 import { AST_FunctionCreate } from "./AST/AST_FunctionCreate";
@@ -57,14 +56,7 @@ class Parser {
     }
 
     private getAddOperator(): AbstractSyntaxTree {
-        const last = this.lastToken;
         this.nextToken(SyntaxKind.Add_ID);
-
-        console.log("LAST: " + last?.type);
-
-        //concatenate strings:
-        if (last?.type === SyntaxKind.String_ID) 
-            return new AST_Concatinate(this.identify());
         return new AST_MathOperation(MathOperation.Add);
     }
     private getRangeKeyword(): AbstractSyntaxTree {

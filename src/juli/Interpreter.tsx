@@ -7,7 +7,6 @@ import { AST_VariableCall, VariableCallAction } from "./AST/AST_VariableCall";
 import { VariableHelper } from "./VariableHelper";
 import { AST_String } from "./AST/AST_String";
 import { AST_Number } from "./AST/AST_Number";
-import { AST_Concatinate } from "./AST/AST_Concatinate";
 import { AST_Bool } from "./AST/AST_Bool";
 import { AST_Arrayaccess } from "./AST/AST_Arrayaccess";
 import { AST_If } from "./AST/AST_If";
@@ -67,7 +66,7 @@ export class Interpreter {
                     throw new Error("Currently not possible to change variable in assignment");
                 else {
                     var variableItem = this.getVariableValue(variable_call);
-                    var datatype = VariableHelper.detectDataType(variableItem);
+                    var datatype = VariableHelper.detectDataTypeOfAny(variableItem);
                     if (datatype === VariableDataType.Number)
                         result = this.calculateMath(result, parseFloat(variableItem), operation);
                     else throw new Error(`Variable ${variable_call.variablename} has invalid datatype`);
@@ -79,38 +78,116 @@ export class Interpreter {
         return { val: result, lastingNodes: null };
     }
 
-    private getVariablesValue(nodes: AbstractSyntaxTree[]): any {
-        if (nodes.length === 1) return this.getVariableValue(nodes[0]);
-
-        let output = "";
-        if (
-            (nodes[0] instanceof AST_VariableCall && nodes[1] instanceof AST_MathOperation) ||
-            (VariableHelper.isNumber(nodes[0]) && nodes[1] instanceof AST_MathOperation)
-        ) {
-            var result = this.breakDownMath(nodes);
-            if (result.lastingNodes == null) return result.val;
-            else {
-                output += result.val;
-                output += this.getVariablesValue(result.lastingNodes);
-                return output;
-            }
-        } else if (
-            nodes[0] instanceof AST_String &&
-            nodes[1] instanceof AST_MathOperation &&
-            (nodes[1] as AST_MathOperation).mathOperation === MathOperation.Multiply &&
-            nodes[2] instanceof AST_Number
-        ) {
-            let str = nodes[0] as AST_String;
-            let integer = nodes[2] as AST_Number;
-
-            //string repeat syntax eg. "Hello" * 10
-            return str.value.repeat(integer.value);
-        } else {
-            for (var item of nodes) {
-                output += this.getVariableValue(item);
-            }
-            return output;
+    private areDatatype(nodes: AbstractSyntaxTree[], dataType: VariableDataType): boolean {
+        for (let node of nodes) {
+            if (VariableHelper.detectDataTypeOfAll(node, this.Variables, this.Functions) === dataType) return true;
         }
+        return false;
+    }
+
+    private isDatatype(node: AbstractSyntaxTree, dataType: VariableDataType): boolean {
+        return VariableHelper.detectDataTypeOfAll(node, this.Variables, this.Functions) === dataType;
+    }
+
+    private isMathOperation(node: AbstractSyntaxTree, mathOperation: MathOperation): boolean {
+        return node instanceof AST_MathOperation && (node as AST_MathOperation).mathOperation === mathOperation;
+    }
+
+    private combineVariables(
+        nodes: AbstractSyntaxTree[],
+        currentValue: any = null,
+        currentDataType: VariableDataType = VariableDataType.None
+    ): { dataType: VariableDataType; value: any; nodes: AbstractSyntaxTree[] | null } {
+        //String concatenation:
+        if (this.areDatatype(nodes, VariableDataType.String)) {
+            let value = currentValue ?? "" + this.getVariableValue(nodes[0]) + this.getVariableValue(nodes[2]);
+            console.log(value);
+            return {
+                value: value,
+                dataType: VariableDataType.String,
+                nodes: nodes.slice(3),
+            };
+        }
+        //Math calculations: 50 + 20 / 10; 20 * 10;
+        else if (
+            currentDataType === VariableDataType.Number &&
+            nodes[0] instanceof AST_MathOperation &&
+            this.isDatatype(nodes[1], VariableDataType.Number)
+        ) {
+            return {
+                value: this.calculateMath(
+                    currentValue as number,
+                    this.getVariableValue(nodes[1]) as number,
+                    (nodes[0] as AST_MathOperation).mathOperation
+                ),
+                dataType: VariableDataType.Number,
+                nodes: nodes.slice(2),
+            };
+        } else if (
+            nodes.length > 2 &&
+            currentValue === null &&
+            this.isDatatype(nodes[0], VariableDataType.Number) &&
+            this.isDatatype(nodes[2], VariableDataType.Number) &&
+            nodes[1] instanceof AST_MathOperation
+        ) {
+            let value = this.calculateMath(
+                this.getVariableValue(nodes[0]) as number,
+                this.getVariableValue(nodes[2]) as number,
+                (nodes[1] as AST_MathOperation).mathOperation
+            );
+            
+            let lastingNodes = nodes.slice(3);
+            console.log(lastingNodes);
+            return ({
+                dataType: VariableDataType.Number,
+                value: value, 
+                nodes: lastingNodes.length === 0 ? null : lastingNodes,
+            });
+        }
+
+        return { dataType: VariableDataType.String, value: "SUS", nodes: nodes.slice(-1) };
+    }
+
+    private evaluateExpression(expression1: {value: any, dataType: VariableDataType}, expression2: {value: any, dataType: VariableDataType}, mathOperation: MathOperation): any{
+        if(expression1.dataType === VariableDataType.String || expression2.dataType === VariableDataType.String){
+            return expression1.value + expression2.value;
+        }
+        else if(expression1.dataType === VariableDataType.Number && expression2.dataType === VariableDataType.Number){
+            return this.calculateMath(expression1.value, expression2.value, mathOperation);
+        }
+    } 
+
+    private getVariablesValue(
+        nodes: AbstractSyntaxTree[],
+        dataType: VariableDataType = VariableDataType.None,
+        value: any = null
+    ): any {
+        let expressions : {value: any, dataType: VariableDataType}[] = [];
+        for(var node of nodes){
+
+            let value = this.getVariableValue(node);
+            let dataType = VariableHelper.detectDataTypeOfAll(node, this.Variables, this.Functions);
+            expressions.push({value: value, dataType: dataType });
+        }
+
+        console.log("EXP:");
+        console.log(expressions);
+
+        if(nodes == null)
+            return;
+
+        if (nodes.length === 1) return value ?? "" + this.getVariableValue(nodes[0]);
+        
+        if(expressions.map(x=>x.dataType == VariableDataType.String))
+        {
+            let result = "";
+        }
+
+        let res = this.combineVariables(nodes, value, dataType);
+        if (res.nodes != null && nodes.length > 2) {
+            return this.getVariablesValue(res.nodes, res.dataType, res.value);
+        }
+        return res.value;
     }
 
     private getVariableByName(name: string): IVariable {
@@ -145,7 +222,7 @@ export class Interpreter {
         value: any,
         minbracketDepth: number
     ): IVariable {
-        return this.Variables[name] = new ScalarVariable(datatype, value, minbracketDepth);
+        return (this.Variables[name] = new ScalarVariable(datatype, value, minbracketDepth));
     }
 
     private deleteVariable(name: string) {
@@ -166,6 +243,9 @@ export class Interpreter {
             this.outputHandler.printOutput(this.getArgumentsValue(function_call.args));
             return true;
         }
+        else if(name === "alert"){
+            
+        }
         return false;
     }
 
@@ -174,37 +254,38 @@ export class Interpreter {
 
         let functionItem: FunctionItem = this.Functions[function_call.name];
 
-        if (functionItem !== undefined) {
-            if (!this.parameterAndArgumentMatch(function_call.args, functionItem?.params))
-                throw new Error(`The parameters for the function ${function_call.name} do not match`);
+        if (functionItem === undefined) {
+            if (!this.getBuiltinFunction(function_call.name, function_call))
+                throw new Error(`No function with the name ${function_call.name} was found`);
+            return;
+        }
+        if (!this.parameterAndArgumentMatch(function_call.args, functionItem?.params))
+            throw new Error(`The parameters for the function ${function_call.name} do not match`);
 
-            for (let i = 0; i < function_call.args.length; i++) {
-                let variableValue: any = this.getVariableValue(function_call.args[i]);
-                let variableItem = functionItem.params[i] as AST_FunctionArgument;
-                this.assignFunctionParameterVariable(
-                    variableItem.name,
-                    variableItem.datatype,
-                    variableValue,
-                    this.parser.bracketDepth.curlyBracket
-                );
-            }
+        for (let i = 0; i < function_call.args.length; i++) {
+            let variableValue: any = this.getVariableValue(function_call.args[i]);
+            let variableItem = functionItem.params[i] as AST_FunctionArgument;
+            this.assignFunctionParameterVariable(
+                variableItem.name,
+                variableItem.datatype,
+                variableValue,
+                this.parser.bracketDepth.curlyBracket
+            );
+        }
 
-            var interpretResult = this.interpretNexts(functionItem.actions);
-            if (interpretResult == null) returnValue = null;
-            if (interpretResult instanceof AST_Return)
-                returnValue = this.getVariablesValue((interpretResult as AST_Return).subItems);
+        var interpretResult = this.interpretNexts(functionItem.actions);
+        if (interpretResult instanceof AST_Return) {
+            let subItems = (interpretResult as AST_Return).subItems;
+            console.log(subItems);
+            returnValue = this.getVariablesValue(subItems);
+        }
 
-            //remove the variables:
-            for (let i = 0; i < function_call.args.length; i++) {
-                var variableItem = functionItem.params[i] as AST_FunctionArgument;
-                this.deleteVariable(variableItem.name);
-            }
-
-            return returnValue;
-        } else if (!this.getBuiltinFunction(function_call.name, function_call))
-            throw new Error(`No function with the name ${function_call.name} was found`);
-
-        return "";
+        //remove the variables:
+        for (let i = 0; i < function_call.args.length; i++) {
+            var variableItem = functionItem.params[i] as AST_FunctionArgument;
+            this.deleteVariable(variableItem.name);
+        }
+        return returnValue;
     }
 
     private checkCondition(ast_if: AST_If) {
@@ -262,13 +343,14 @@ export class Interpreter {
         if (node instanceof AST_VariableCall) return this.getVariableCallValue(node as AST_VariableCall);
         else if (node instanceof AST_String) return (node as AST_String).value;
         else if (node instanceof AST_Number) return (node as AST_Number).value;
-        else if (node instanceof AST_Concatinate) return this.getVariableValue((node as AST_Concatinate).item2);
         else if (node instanceof AST_Bool) return (node as AST_Bool).value;
         else if (node instanceof AST_Arrayaccess) return this.getArrayValueByIndex(node as AST_Arrayaccess);
         else if (node instanceof AST_FunctionCall) return this.callFunction(node as AST_FunctionCall);
         else if (node instanceof AST_If) return this.handleIf(node as AST_If);
         else if (node instanceof AST_Len) return this.getVariableLength(node as AST_Len);
         else if (node instanceof AST_ArrayValues) return (node as AST_ArrayValues).items;
+        else if (node instanceof AST_MathOperation) return (node as AST_MathOperation).mathOperation;
+        
         throw new Error(`Could not get value of variable ${node} -> getVariableValue(node)`);
     }
 
@@ -300,8 +382,10 @@ export class Interpreter {
     }
 
     private interpretNexts(nodes: AbstractSyntaxTree[]): any {
+        console.log("Interpret Nexts: ");
+        console.log(nodes);
         for (let node of nodes) {
-            var next = this.interpretNext(node);
+            return this.interpretNext(node);
             // if (next != null) return next;
         }
         return null;
@@ -312,7 +396,6 @@ export class Interpreter {
             //when: variable = x
             if (variable_call.nextToken != null) this.interpretNext(variable_call.nextToken);
         }
-        //no need for else, why call a variable without doing anything with it
     }
 
     private createFunction(function_create: AST_FunctionCreate) {
@@ -331,7 +414,7 @@ export class Interpreter {
     ): IVariable {
         return (this.Variables[name] = new ScalarVariable(datatype, value, minbracketDepth));
     }
-    
+
     private changeIterableVariable(name: string, newValue: any) {
         this.Variables[name].value = newValue;
     }
@@ -376,9 +459,8 @@ export class Interpreter {
         //When the iteration opoerator is of type array:
         else {
             let value = this.getVariableValue(for_loop.iterationOperator);
-            if(value === null)
-                return;
-            
+            if (value === null) return;
+
             // if (!this.isIteratable(variable_call.variablename))
             //     throw new Error("Variable " + variable_call.variablename + " is not iterable");
 
@@ -390,7 +472,7 @@ export class Interpreter {
                 this.parser.bracketDepth.curlyBracket
             );
 
-                console.log(value);
+            console.log(value);
 
             //array item:
             if (Array.isArray(value)) {
@@ -399,7 +481,7 @@ export class Interpreter {
                     this.changeIterableVariable(for_loop.iterationVariableName, this.getVariableValue(value[i]));
                     this.interpretNexts(for_loop.subItems);
                 }
-            } else if(typeof(value) == "string") {
+            } else if (typeof value == "string") {
                 //string:
                 for (let i = 0; i < value.length; i++) {
                     //update the value of the variable
@@ -414,16 +496,17 @@ export class Interpreter {
     }
 
     private interpretNext(node: AbstractSyntaxTree): any {
-        if (node == null) return null;
+        if (node === undefined) return null;
         if (node instanceof AST_VariableAssignment) this.assignVariable(node as AST_VariableAssignment);
         else if (node instanceof AST_VariableCall) this.callVariable(node as AST_VariableCall);
-        else if (node instanceof AST_FunctionCall) this.callFunction(node as AST_FunctionCall);
+        else if (node instanceof AST_FunctionCall) return this.callFunction(node as AST_FunctionCall);
         else if (node instanceof AST_FunctionCreate) this.createFunction(node as AST_FunctionCreate);
         else if (node instanceof AST_ForLoop) this.handleForLoop(node as AST_ForLoop);
         else if (node instanceof AST_Arrayaccess) this.callArrayAccess(node as AST_Arrayaccess);
         else if (node instanceof AST_Return) return node as AST_Return;
         else if (node instanceof AST_If) return this.handleIf(node as AST_If);
         else if (node instanceof AST_Len) return this.getVariableLength(node as AST_Len);
+
         return null;
     }
 
